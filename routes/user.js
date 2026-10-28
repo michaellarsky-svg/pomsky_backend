@@ -388,7 +388,7 @@ router.get('/breeder-profile', authMiddleware, async (req, res) => {
 // ── Pomsky Listings ──
 
 // Add a new listing
-router.post('/listings', authMiddleware, approvedBreederMiddleware, async (req, res) => {
+router.post('/listings', authMiddleware, approvedBreederMiddleware, upload.any(), async (req, res) => {
   const {
     name, gender, pomsky_type, markings,
     price, price_min, price_max, availability, state, city,
@@ -406,6 +406,14 @@ router.post('/listings', authMiddleware, approvedBreederMiddleware, async (req, 
     return res.status(400).json({ error: 'Please set up your breeder profile first' });
   }
 
+  let uploadedUrls = [];
+  for (const f of (req.files || [])) {
+    const fn = 'listings/' + Date.now() + '-' + Math.random().toString(36).slice(2) + '-' + f.originalname;
+    const up = await supabase.storage.from('pomsky-images').upload(fn, f.buffer, { contentType: f.mimetype });
+    if (up.error) { console.error('LISTING IMAGE UPLOAD ERROR:', up.error); } else { uploadedUrls.push(supabase.storage.from('pomsky-images').getPublicUrl(fn).data.publicUrl); }
+  }
+  const finalImages = uploadedUrls.length > 0 ? uploadedUrls : (Array.isArray(images) ? images : []);
+
   const { data, error } = await supabase
     .from('pomsky_listings')
     .insert({
@@ -417,7 +425,7 @@ router.post('/listings', authMiddleware, approvedBreederMiddleware, async (req, 
       price_max: price_max ? Number(price_max) : null,
       availability: availability || 'available',
       state, city,
-      images: images || [],
+      images: finalImages,
       description, birth_date,
       is_new_litter: is_new_litter || false,
       puppies_available: puppies_available ? Number(puppies_available) : null
