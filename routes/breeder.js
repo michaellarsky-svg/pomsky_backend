@@ -273,7 +273,7 @@ router.post('/listings/:id/request-blast', authMiddleware, approvedBreederMiddle
   }
 });
 
-router.post('/schedule-litter', authMiddleware, approvedBreederMiddleware, upload.array('photos'), async (req, res) => {
+router.post('/schedule-litter', authMiddleware, approvedBreederMiddleware, upload.any(), async (req, res) => {
   try {
     const user = req.user;
     const files = req.files;
